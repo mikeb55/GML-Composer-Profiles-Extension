@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GML MIDI Player</title>
+    <script src="https://cdn.jsdelivr.net/npm/tone@14/build/Tone.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2/build/Midi.js"></script>
+</head>
+<body style="background:#1a1a1a; color:white; font-family:Arial; padding:20px;">
+    <h1>MIDI Player</h1>
+    <button onclick="loadFile()">Load MIDI</button>
+    <button onclick="playMidi()" id="playBtn" disabled>Play</button>
+    <button onclick="stop()">Stop</button>
+    <input type="file" id="file" accept=".mid" style="display:none" onchange="handleFile(this)">
+    <div id="status">Load a MIDI file to play</div>
+    
+    <script>
+    let midi = null;
+    let synth = null;
+    
+    async function loadFile() {
+        document.getElementById('file').click();
+    }
+    
+    async function handleFile(input) {
+        const file = input.files[0];
+        const buffer = await file.arrayBuffer();
+        midi = new Midi(buffer);
+        document.getElementById('status').innerHTML = 'Loaded: ' + file.name + '<br>Tracks: ' + midi.tracks.length;
+        document.getElementById('playBtn').disabled = false;
+    }
+    
+    async function playMidi() {
+        if (!synth) {
+            await Tone.start();
+            synth = new Tone.PolySynth().toDestination();
+        }
+        
+        const now = Tone.now();
+        midi.tracks.forEach(track => {
+            track.notes.forEach(note => {
+                synth.triggerAttackRelease(note.name, note.duration, note.time + now, note.velocity);
+            });
+        });
+        
+        document.getElementById('status').innerHTML += '<br>Playing...';
+    }
+    
+    function stop() {
+        if (synth) synth.releaseAll();
+        document.getElementById('status').innerHTML += '<br>Stopped';
+    }
+    </script>
+</body>
+</html>

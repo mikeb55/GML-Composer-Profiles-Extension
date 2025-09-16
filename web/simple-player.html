@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Simple MIDI Player</title>
+<script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
+</head>
+<body style="padding:40px; font-family:Arial;">
+<h1>Simple MIDI Player</h1>
+<button onclick="testSound()">Test Sound</button>
+<button onclick="playScale()">Play Scale</button>
+<p id="status">Click Test Sound to verify audio works</p>
+<script>
+let synth = null;
+async function testSound() {
+  await Tone.start();
+  if (!synth) synth = new Tone.Synth().toDestination();
+  synth.triggerAttackRelease("C4", "8n");
+  document.getElementById("status").innerText = "Played C4";
+}
+async function playScale() {
+  await Tone.start();
+  if (!synth) synth = new Tone.Synth().toDestination();
+  const notes = ["C4","D4","E4","F4","G4"];
+  const now = Tone.now();
+  notes.forEach((n,i) => synth.triggerAttackRelease(n,"8n",now+i*0.25));
+  document.getElementById("status").innerText = "Played scale";
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GML Composer Player</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover { background: #45a049; }
+        button:disabled { background: #666; cursor: not-allowed; }
+        .section-display {
+            padding: 20px;
+            background: #2a2a2a;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .section { 
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 5px;
+            background: #444;
+            border-radius: 3px;
+        }
+        .section.active { background: #4CAF50; }
+        #status { margin: 20px 0; color: #aaa; }
+    </style>
+</head>
+<body>
+    <h1>🎵 GML Composer Extension Player</h1>
+    
+    <div class="controls">
+        <button id="playBtn">Play</button>
+        <button id="stopBtn" disabled>Stop</button>
+        <button id="loadBtn">Load MIDI</button>
+        <input type="file" id="fileInput" accept=".mid" style="display:none">
+    </div>
+    
+    <div id="status">Ready</div>
+    
+    <div class="section-display">
+        <h3>Sections:</h3>
+        <span class="section" data-section="A">A: Original</span>
+        <span class="section" data-section="B">B: Bach</span>
+        <span class="section" data-section="C">C: B.B. King</span>
+        <span class="section" data-section="D">D: Coltrane</span>
+    </div>
+    
+    <div id="noteDisplay">
+        <h3>Current Pattern:</h3>
+        <canvas id="pianoRoll" width="800" height="200" style="background:#333; border-radius:5px;"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/tone@14/build/Tone.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi"></script>
+    <script>
+        let synth = null;
+        let currentPart = null;
+        let isPlaying = false;
+        
+        // Initialize Tone.js
+        async function init() {
+            await Tone.start();
+            synth = new Tone.PolySynth(Tone.Synth, {
+                envelope: {
+                    attack: 0.02,
+                    decay: 0.1,
+                    sustain: 0.3,
+                    release: 1
+                }
+            }).toDestination();
+            
+            console.log('Audio ready');
+        }
+        
+        // Play test composition
+        async function playTestComposition() {
+            document.getElementById('status').textContent = 'Playing test composition...';
+            isPlaying = true;
+            
+            // Simulate your sections
+            const sections = [
+                { name: 'A', notes: generateScale(60, 'major', 4) },
+                { name: 'B', notes: generateBachPattern() },
+                { name: 'C', notes: generateBluesPattern() },
+                { name: 'D', notes: generateJazzPattern() }
+            ];
+            
+            for (let section of sections) {
+                if (!isPlaying) break;
+                
+                // Highlight active section
+                document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+                document.querySelector(`[data-section="${section.name}"]`).classList.add('active');
+                
+                // Play section
+                await playSection(section.notes);
+            }
+            
+            stopPlayback();
+        }
+        
+        function generateScale(root, type, measures) {
+            const scale = [0, 2, 4, 5, 7, 9, 11, 12];
+            const notes = [];
+            
+            for (let m = 0; m < measures; m++) {
+                scale.forEach((interval, i) => {
+                    notes.push({
+                        pitch: root + interval,
+                        time: m * 2 + i * 0.25,
+                        duration: 0.2
+                    });
+                });
+            }
+            return notes;
+        }
+        
+        function generateBachPattern() {
+            // Arpeggiated pattern
+            const pattern = [60, 64, 67, 72, 67, 64];
+            return pattern.map((pitch, i) => ({
+                pitch: pitch,
+                time: i * 0.25,
+                duration: 0.2
+            }));
+        }
+        
+        function generateBluesPattern() {
+            // Blues scale with bends
+            const blues = [60, 63, 65, 66, 67, 70];
+            return blues.map((pitch, i) => ({
+                pitch: pitch,
+                time: i * 0.5,
+                duration: 0.4
+            }));
+        }
+        
+        function generateJazzPattern() {
+            // Fast bebop run
+            const notes = [];
+            for (let i = 0; i < 16; i++) {
+                notes.push({
+                    pitch: 60 + (i % 12),
+                    time: i * 0.125,
+                    duration: 0.1
+                });
+            }
+            return notes;
+        }
+        
+        async function playSection(notes) {
+            drawPianoRoll(notes);
+            
+            const now = Tone.now();
+            notes.forEach(note => {
+                const pitch = Tone.Frequency(note.pitch, 'midi');
+                synth.triggerAttackRelease(pitch, note.duration, now + note.time);
+            });
+            
+            // Wait for section to complete
+            const sectionLength = Math.max(...notes.map(n => n.time + n.duration));
+            await new Promise(resolve => setTimeout(resolve, sectionLength * 1000));
+        }
+        
+        function drawPianoRoll(notes) {
+            const canvas = document.getElementById('pianoRoll');
+            const ctx = canvas.getContext('2d');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (!notes || notes.length === 0) return;
+            
+            const minPitch = Math.min(...notes.map(n => n.pitch));
+            const maxPitch = Math.max(...notes.map(n => n.pitch));
+            const maxTime = Math.max(...notes.map(n => n.time + n.duration));
+            
+            notes.forEach(note => {
+                const x = (note.time / maxTime) * canvas.width;
+                const width = (note.duration / maxTime) * canvas.width;
+                const y = canvas.height - ((note.pitch - minPitch) / (maxPitch - minPitch + 1)) * canvas.height - 10;
+                const height = 8;
+                
+                ctx.fillStyle = '#4CAF50';
+                ctx.fillRect(x, y, width, height);
+            });
+        }
+        
+        function stopPlayback() {
+            isPlaying = false;
+            synth.releaseAll();
+            document.getElementById('status').textContent = 'Stopped';
+            document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+            document.getElementById('playBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+        }
+        
+        // Event listeners
+        document.getElementById('playBtn').addEventListener('click', async () => {
+            await init();
+            document.getElementById('playBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            playTestComposition();
+        });
+        
+        document.getElementById('stopBtn').addEventListener('click', stopPlayback);
+        
+        document.getElementById('loadBtn').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+        
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('status').textContent = `Loaded: ${file.name}`;
+                // Future: Parse and play MIDI file
+            }
+        });
+        
+        // Initialize on load
+        window.addEventListener('load', () => {
+            console.log('GML Composer Player ready');
+        });
+    </script>
+</body>
+</html>
