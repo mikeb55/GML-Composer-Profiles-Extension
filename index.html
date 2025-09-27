@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Composer Profiles - MIDI Pattern Extractor</title>
+    <style>
+        body { 
+            font-family: Arial; 
+            background: linear-gradient(135deg, #1a1a2e, #0f3460); 
+            color: white; 
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .section { 
+            background: rgba(255,255,255,0.1); 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 10px;
+        }
+        #dropzone {
+            border: 3px dashed #4CAF50;
+            padding: 50px;
+            text-align: center;
+            cursor: pointer;
+        }
+        #dropzone:hover { background: rgba(76,175,80,0.1); }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .profile-card {
+            display: inline-block;
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            margin: 10px;
+            border-radius: 8px;
+            min-width: 200px;
+        }
+        #output {
+            background: rgba(0,0,0,0.5);
+            padding: 20px;
+            border-radius: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Composer Profiles - MIDI Pattern Extractor</h1>
+        
+        <div class="section">
+            <h3>Step 1: Load MIDI File</h3>
+            <div id="dropzone">
+                Drop MIDI file here or click to browse
+                <input type="file" id="fileInput" accept=".mid,.midi" style="display:none">
+            </div>
+        </div>
+        
+        <div class="section">
+            <h3>Step 2: Extracted Profile</h3>
+            <div id="profileDisplay"></div>
+        </div>
+        
+        <div class="section">
+            <h3>Step 3: Save/Apply Profile</h3>
+            <button onclick="saveProfile()">Save Profile</button>
+            <button onclick="applyToQuintet()">Apply to Quintet</button>
+            <button onclick="applyToQuartet()">Apply to Quartet</button>
+        </div>
+        
+        <div class="section">
+            <h3>Saved Profiles</h3>
+            <div id="savedProfiles"></div>
+        </div>
+        
+        <div id="output">Ready to analyze MIDI files...</div>
+    </div>
+
+    <script>
+        let currentProfile = null;
+        let savedProfiles = JSON.parse(localStorage.getItem('composerProfiles') || '[]');
+        
+        // MIDI Parser
+        function parseMIDI(buffer) {
+            const data = new Uint8Array(buffer);
+            const profile = {
+                name: 'Unknown Composer',
+                timestamp: Date.now(),
+                notes: [],
+                intervals: [],
+                chords: [],
+                rhythm: [],
+                tempo: 120,
+                key: null,
+                stats: {}
+            };
+            
+            // Check header
+            if (String.fromCharCode(...data.slice(0, 4)) !== 'MThd') {
+                return { error: 'Not a valid MIDI file' };
+            }
+            
+            // Parse tracks
+            let pos = 14;
+            let noteEvents = [];
+            let currentTime = 0;
+            
+            while (pos < data.length - 8) {
+                if (String.fromCharCode(...data.slice(pos, pos + 4)) === 'MTrk') {
+                    pos += 4;
+                    const trackLength = (data[pos] << 24) | (data[pos+1] << 16) | (data[pos+2] << 8) | data[pos+3];
+                    pos += 4;
+                    const trackEnd = pos + trackLength;
+                    
+                    while (pos < trackEnd && pos < data.length) {
+                        // Read delta time
+                        let delta = 0;
+                        while (data[pos] & 0x80) {
+                            delta = (delta << 7) | (data[pos] & 0x7F);
+                            pos++;
+                        }
+                        delta = (delta << 7) | data[pos];
+                        pos++;
+                        currentTime += delta;
+                        
+                        const event = data[pos];
+                        
+                        if ((event & 0xF0) === 0x90 && data[pos + 2] > 0) { // Note ON
+                            noteEvents.push({
+                                time: currentTime,
+                                pitch: data[pos + 1],
+                                velocity: data[pos + 2],
+                                type: 'on'
+                            });
+                            pos += 3;
+                        } else if ((event & 0xF0) === 0x80 || ((event & 0xF0) === 0x90 && data[pos + 2] === 0)) { // Note OFF
+                            noteEvents.push({
+                                time: currentTime,
+                                pitch: data[pos + 1],
+                                type: 'off'
+                            });
+                            pos += 3;
+                        } else if (event === 0xFF) { // Meta event
+                            const metaType = data[pos + 1];
+                            const length = data[pos + 2];
+                            if (metaType === 0x51 && length === 3) { // Tempo
+                                const tempo = (data[pos + 3] << 16) | (data[pos + 4] << 8) | data[pos + 5];
+                                profile.tempo = Math.round(60000000 / tempo);
+                            }
+                            pos += 3 + length;
+                        } else {
+                            pos++;
+                        }
+                    }
+                }
+                pos++;
+            }
+            
+            // Analyze patterns
+            analyzePatterns(noteEvents, profile);
+            
+            return profile;
+        }
+        
+        function analyzePatterns(events, profile) {
+            // Extract notes and timing
+            const notes = events.filter(e => e.type === 'on');
+            profile.notes = notes.map(n => n.pitch);
+            
+            // Calculate intervals
+            for (let i = 1; i < notes.length; i++) {
+                profile.intervals.push(notes[i].pitch - notes[i-1].pitch);
+            }
+            
+            // Find chords (notes at same time)
+            const timeGroups = {};
+            notes.forEach(n => {
+                if (!timeGroups[n.time]) timeGroups[n.time] = [];
+                timeGroups[n.time].push(n.pitch);
+            });
+            
+            Object.values(timeGroups).forEach(group => {
+                if (group.length > 1) {
+                    profile.chords.push(group);
+                }
+            });
+            
+            // Calculate statistics
+            profile.stats = {
+                noteCount: notes.length,
+                avgPitch: Math.round(notes.reduce((a, n) => a + n.pitch, 0) / notes.length),
+                avgVelocity: Math.round(notes.reduce((a, n) => a + (n.velocity || 80), 0) / notes.length),
+                chordCount: profile.chords.length,
+                range: Math.max(...profile.notes) - Math.min(...profile.notes)
+            };
+            
+            // Guess key
+            const noteClasses = profile.notes.map(n => n % 12);
+            const counts = new Array(12).fill(0);
+            noteClasses.forEach(n => counts[n]++);
+            const maxCount = Math.max(...counts);
+            const tonic = counts.indexOf(maxCount);
+            profile.key = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'][tonic];
+        }
+        
+        // File handling
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        
+        dropzone.onclick = () => fileInput.click();
+        dropzone.ondragover = (e) => e.preventDefault();
+        dropzone.ondrop = (e) => {
+            e.preventDefault();
+            handleFile(e.dataTransfer.files[0]);
+        };
+        
+        fileInput.onchange = (e) => handleFile(e.target.files[0]);
+        
+        function handleFile(file) {
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                currentProfile = parseMIDI(e.target.result);
+                currentProfile.name = file.name.replace('.mid', '').replace('.midi', '');
+                displayProfile(currentProfile);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+        
+        function displayProfile(profile) {
+            if (profile.error) {
+                document.getElementById('output').textContent = 'Error: ' + profile.error;
+                return;
+            }
+            
+            const display = document.getElementById('profileDisplay');
+            display.innerHTML = `
+                <div class="profile-card">
+                    <h4>${profile.name}</h4>
+                    <p>Tempo: ${profile.tempo} BPM</p>
+                    <p>Key: ${profile.key || 'Unknown'}</p>
+                    <p>Notes: ${profile.stats.noteCount}</p>
+                    <p>Chords: ${profile.stats.chordCount}</p>
+                    <p>Range: ${profile.stats.range} semitones</p>
+                    <p>Avg Velocity: ${profile.stats.avgVelocity}</p>
+                </div>
+            `;
+            
+            let output = `Profile: ${profile.name}\n`;
+            output += `Tempo: ${profile.tempo} BPM\n`;
+            output += `Key: ${profile.key}\n\n`;
+            output += `Intervals (first 20): ${profile.intervals.slice(0, 20).join(', ')}\n\n`;
+            output += `Chords found: ${profile.chords.length}\n`;
+            if (profile.chords.length > 0) {
+                output += `First chord: [${profile.chords[0].join(', ')}]\n`;
+            }
+            
+            document.getElementById('output').textContent = output;
+        }
+        
+        function saveProfile() {
+            if (!currentProfile) return;
+            
+            savedProfiles.push(currentProfile);
+            localStorage.setItem('composerProfiles', JSON.stringify(savedProfiles));
+            updateSavedDisplay();
+            alert('Profile saved!');
+        }
+        
+        function applyToQuintet() {
+            if (!currentProfile) return;
+            localStorage.setItem('currentComposerProfile', JSON.stringify(currentProfile));
+            alert('Profile ready for Quintet Composer! Open quintet-composer to use.');
+        }
+        
+        function applyToQuartet() {
+            if (!currentProfile) return;
+            localStorage.setItem('currentComposerProfile', JSON.stringify(currentProfile));
+            alert('Profile ready for Quartet Engine! Open quartet-engine to use.');
+        }
+        
+        function updateSavedDisplay() {
+            const display = document.getElementById('savedProfiles');
+            display.innerHTML = savedProfiles.map((p, i) => `
+                <div class="profile-card">
+                    <h4>${p.name}</h4>
+                    <button onclick="loadProfile(${i})">Load</button>
+                    <button onclick="deleteProfile(${i})">Delete</button>
+                </div>
+            `).join('');
+        }
+        
+        function loadProfile(index) {
+            currentProfile = savedProfiles[index];
+            displayProfile(currentProfile);
+        }
+        
+        function deleteProfile(index) {
+            savedProfiles.splice(index, 1);
+            localStorage.setItem('composerProfiles', JSON.stringify(savedProfiles));
+            updateSavedDisplay();
+        }
+        
+        // Initialize
+        updateSavedDisplay();
+    </script>
+<script src="complete_profiles.js"></script>
+</body>
+</html>
+
+<script>
+// File system save using local server
+async function saveProfileToServer() {
+    if (!currentProfile) return;
+    
+    try {
+        const response = await fetch('http://localhost:8888/save-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(currentProfile)
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            alert(`Profile saved to: composer-profiles-data/${result.filename}`);
+        }
+    } catch (err) {
+        alert('Server not running! Start with: node server.js');
+        console.error(err);
+    }
+}
+
+// Replace the save button function
+document.querySelector('button[onclick="saveProfile()"]').onclick = saveProfileToServer;
+</script>

@@ -1,0 +1,20 @@
+<html><head><title>v1.2 Working</title></head> 
+<body style="font-family:Arial;padding:20px;"> 
+<h1>MRProfiles v1.2 - Simple Working Version</h1> 
+<select id="p"><option>Select</option><option value="w">Wes</option><option value="j">Jim</option></select> 
+<button onclick="test()">Export</button> 
+<div id="o" style="background:#f0f0f0;padding:10px;margin:10px 0;">Output</div> 
+<script> 
+function test(){ 
+var s=document.getElementById('p').value; 
+if(s=='w'){var n='Wes Montgomery';} 
+if(s=='j'){var n='Jim Hall';} 
+var x='<?xml version="1.0"?><score-partwise><part-list><score-part id="P1"><part-name>'+n+'</part-name></score-part></part-list></part></score-partwise>'; 
+var b=new Blob([x],{type:'text/xml'}); 
+var a=document.createElement('a'); 
+a.href=URL.createObjectURL(b); 
+a.download=n+'.musicxml'; 
+a.click(); 
+document.getElementById('o').innerHTML='Downloaded '+n+'.musicxml - Move to Scores folder'; 
+} 
+</script></body></html> 

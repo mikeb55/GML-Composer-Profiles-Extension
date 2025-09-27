@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MusicXML Export - Working</title>
+    <style>
+        body { font-family: Arial; padding: 40px; background: #f0f0f0; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; }
+        button { padding: 15px 30px; font-size: 16px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #45a049; }
+        #status { margin: 20px 0; padding: 15px; background: #e8f5e9; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MusicXML Export Tool</h1>
+        <p>This will export a valid MusicXML file that works in Sibelius.</p>
+        
+        <button onclick="exportMusicXML()">Export C Major Scale</button>
+        
+        <div id="status">Ready to export...</div>
+    </div>
+    
+    <script>
+        function exportMusicXML() {
+            // Create valid MusicXML
+            var xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+            xml += '<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">\n';
+            xml += '<score-partwise version="3.1">\n';
+            xml += '  <part-list>\n';
+            xml += '    <score-part id="P1">\n';
+            xml += '      <part-name>Guitar</part-name>\n';
+            xml += '    </score-part>\n';
+            xml += '  </part-list>\n';
+            xml += '  <part id="P1">\n';
+            xml += '    <measure number="1">\n';
+            xml += '      <attributes>\n';
+            xml += '        <divisions>256</divisions>\n';
+            xml += '        <key>\n';
+            xml += '          <fifths>0</fifths>\n';
+            xml += '        </key>\n';
+            xml += '        <time>\n';
+            xml += '          <beats>4</beats>\n';
+            xml += '          <beat-type>4</beat-type>\n';
+            xml += '        </time>\n';
+            xml += '        <clef>\n';
+            xml += '          <sign>G</sign>\n';
+            xml += '          <line>2</line>\n';
+            xml += '        </clef>\n';
+            xml += '      </attributes>\n';
+            
+            // Add C major scale notes
+            var notes = [
+                {step: 'C', octave: 4},
+                {step: 'D', octave: 4},
+                {step: 'E', octave: 4},
+                {step: 'F', octave: 4}
+            ];
+            
+            notes.forEach(function(note) {
+                xml += '      <note>\n';
+                xml += '        <pitch>\n';
+                xml += '          <step>' + note.step + '</step>\n';
+                xml += '          <octave>' + note.octave + '</octave>\n';
+                xml += '        </pitch>\n';
+                xml += '        <duration>256</duration>\n';
+                xml += '        <type>quarter</type>\n';
+                xml += '      </note>\n';
+            });
+            
+            xml += '    </measure>\n';
+            xml += '  </part>\n';
+            xml += '</score-partwise>';
+            
+            // Download the file
+            var blob = new Blob([xml], {type: 'text/xml'});
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'guitar-pattern.musicxml';
+            a.click();
+            
+            document.getElementById('status').innerHTML = 'Downloaded! Move from Downloads to C:\\Users\\mike\\Documents\\Scores\\';
+        }
+    </script>
+</body>
+</html>

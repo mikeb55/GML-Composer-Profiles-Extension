@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MRProfiles + FretboardKit Integration</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: rgba(255,255,255,0.95);
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .stats {
+            display: flex;
+            gap: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .stat-value {
+            font-weight: 600;
+            color: #764ba2;
+        }
+        
+        .main-container {
+            display: flex;
+            flex: 1;
+            max-width: 1400px;
+            margin: 20px auto;
+            width: 100%;
+            gap: 20px;
+            padding: 0 20px;
+        }
+        
+        .sidebar {
+            width: 350px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 10px;
+            padding: 20px;
+            max-height: calc(100vh - 140px);
+            overflow-y: auto;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .category {
+            margin-bottom: 15px;
+        }
+        
+        .category-header {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .category-header:hover {
+            background: #ebebeb;
+        }
+        
+        .category-count {
+            background: #764ba2;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        
+        .profile-list {
+            display: none;
+            padding: 10px 0;
+        }
+        
+        .profile-list.active {
+            display: block;
+        }
+        
+        .profile-item {
+            padding: 8px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 2px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 2px solid transparent;
+        }
+        
+        .profile-item:hover {
+            background: #f0f0f0;
+        }
+        
+        .profile-item.selected {
+            background: #667eea;
+            color: white;
+        }
+        
+        .profile-item.guitar-compatible {
+            border-color: #4caf50;
+        }
+        
+        .profile-item.piano-adapted {
+            border-color: #ffc107;
+        }
+        
+        .compatibility-badge {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+        
+        .high { background: #4caf50; color: white; }
+        .medium { background: #ffc107; color: #333; }
+        .low { background: #e0e0e0; color: #666; }
+        
+        .content-area {
+            flex: 1;
+            background: rgba(255,255,255,0.95);
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .profile-header {
+            margin-bottom: 20px;
+        }
+        
+        .profile-name {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .profile-description {
+            color: #666;
+            margin-bottom: 15px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: #666;
+            font-weight: 500;
+            position: relative;
+        }
+        
+        .tab:hover {
+            color: #333;
+        }
+        
+        .tab.active {
+            color: #667eea;
+        }
+        
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #667eea;
+        }
+        
+        .fretboard-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .pattern-selector {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .pattern-selector select {
+            flex: 1;
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        #fretboard {
+            width: 100%;
+            height: 300px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+        }
+        
+        .techniques-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .technique-card {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .technique-card:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .technique-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .technique-desc {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎸 MRProfiles + FretboardKit Integration</h1>
+        <div class="stats">
+            <div class="stat">
+                <span>Total Profiles:</span>
+                <span class="stat-value">77</span>
+            </div>
+            <div class="stat">
+                <span>Guitar Compatible:</span>
+                <span class="stat-value">45</span>
+            </div>
+            <div class="stat">
+                <span>Piano Adapted:</span>
+                <span class="stat-value">18</span>
+            </div>
+            <div class="stat">
+                <span>Techniques:</span>
+                <span class="stat-value">28</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div class="sidebar">
+            <input type="text" class="search-box" placeholder="Search profiles..." id="searchBox">
+            
+            <div class="category">
+                <div class="category-header" onclick="toggleCategory('classical')">
+                    <span>▶ Classical Guitar</span>
+                    <span class="category-count">8</span>
+                </div>
+                <div class="profile-list" id="classical">
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('sor-giuliani')">
+                        <span>Sor/Giuliani</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('tarrega-mertz')">
+                        <span>Tárrega/Mertz/Regondi</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('villa-lobos')">
+                        <span>Villa-Lobos/Brouwer</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('julian-bream')">
+                        <span>Julian Bream</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item" onclick="selectProfile('bach')">
+                        <span>Bach</span>
+                        <span class="compatibility-badge medium">MEDIUM</span>
+                    </div>
+                    <div class="profile-item" onclick="selectProfile('mozart')">
+                        <span>Mozart</span>
+                        <span class="compatibility-badge low">LOW</span>
+                    </div>
+                    <div class="profile-item" onclick="selectProfile('debussy')">
+                        <span>Debussy/Ravel</span>
+                        <span class="compatibility-badge medium">MEDIUM</span>
+                    </div>
+                    <div class="profile-item" onclick="selectProfile('bartok')">
+                        <span>Bartók</span>
+                        <span class="compatibility-badge medium">MEDIUM</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="category">
+                <div class="category-header" onclick="toggleCategory('jazz')">
+                    <span>▶ Jazz Guitar</span>
+                    <span class="category-count">11</span>
+                </div>
+                <div class="profile-list" id="jazz">
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('wes-montgomery')">
+                        <span>Wes Montgomery</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('jim-hall')">
+                        <span>Jim Hall</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('joe-pass')">
+                        <span>Joe Pass</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('john-scofield')">
+                        <span>John Scofield</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('pat-metheny')">
+                        <span>Pat Metheny</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('larry-carlton')">
+                        <span>Larry Carlton</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('bill-frisell')">
+                        <span>Bill Frisell</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('robben-ford')">
+                        <span>Robben Ford</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('mary-halvorson')">
+                        <span>Mary Halvorson</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('django')">
+                        <span>Django Reinhardt</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('john-mclaughlin')">
+                        <span>John McLaughlin</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="category">
+                <div class="category-header" onclick="toggleCategory('rock')">
+                    <span>▶ Rock/Electric</span>
+                    <span class="category-count">5</span>
+                </div>
+                <div class="profile-list" id="rock">
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('hendrix')">
+                        <span>Jimi Hendrix</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('satriani')">
+                        <span>Joe Satriani</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('yes')">
+                        <span>Yes (Prog)</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item" onclick="selectProfile('steely-dan')">
+                        <span>Steely Dan</span>
+                        <span class="compatibility-badge medium">MEDIUM</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('james-blood')">
+                        <span>James Blood Ulmer</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="category">
+                <div class="category-header" onclick="toggleCategory('alternative')">
+                    <span>▶ Alternative Tunings</span>
+                    <span class="category-count">7</span>
+                </div>
+                <div class="profile-list" id="alternative">
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('joni-mitchell')">
+                        <span>Joni Mitchell</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('sonic-youth')">
+                        <span>Sonic Youth</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('bert-jansch')">
+                        <span>Bert Jansch</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('nick-drake')">
+                        <span>Nick Drake</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('paul-simon')">
+                        <span>Paul Simon</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('jeff-tweedy')">
+                        <span>Jeff Tweedy</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('dadgad')">
+                        <span>Irish DADGAD</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="category">
+                <div class="category-header" onclick="toggleCategory('shoegaze')">
+                    <span>▶ Shoegaze</span>
+                    <span class="category-count">9</span>
+                </div>
+                <div class="profile-list" id="shoegaze">
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('mbv')">
+                        <span>My Bloody Valentine</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('slowdive')">
+                        <span>Slowdive</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('ride')">
+                        <span>Ride</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('lush')">
+                        <span>Lush</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('swervedriver')">
+                        <span>Swervedriver</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('cocteau')">
+                        <span>Cocteau Twins</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('chapterhouse')">
+                        <span>Chapterhouse</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('m83')">
+                        <span>M83</span>
+                        <span class="compatibility-badge medium">MEDIUM</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('alcest')">
+                        <span>Alcest</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="category">
+                <div class="category-header" onclick="toggleCategory('greek')">
+                    <span>▶ Greek & Rebetiko</span>
+                    <span class="category-count">15</span>
+                </div>
+                <div class="profile-list" id="greek">
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('rebetiko')">
+                        <span>Greek Rebetiko</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('tsitsanis')">
+                        <span>Vassilis Tsitsanis</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('vamvakaris')">
+                        <span>Markos Vamvakaris</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('chiotis')">
+                        <span>Manolis Chiotis</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('batis')">
+                        <span>Giorgos Batis</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('mitsakis')">
+                        <span>Giorgos Mitsakis</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('gogos')">
+                        <span>Dimitris Gogos</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('toundas')">
+                        <span>Panagiotis Toundas</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('skarvelis')">
+                        <span>Kostas Skarvelis</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('peristeris')">
+                        <span>Spyros Peristeris</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('papaioannou')">
+                        <span>Yiannis Papaioannou</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('bayanderas')">
+                        <span>Bayanderas</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('perpiniadis')">
+                        <span>Perpiniadis</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('tsaousakis')">
+                        <span>Tsaousakis</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('ksintaris')">
+                        <span>Giorgos Ksintaris</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="category">
+                <div class="category-header" onclick="toggleCategory('piano')">
+                    <span>▶ Piano/Jazz (Adapted)</span>
+                    <span class="category-count">18</span>
+                </div>
+                <div class="profile-list" id="piano">
+                    <div class="profile-item piano-adapted" onclick="selectProfile('bill-evans')">
+                        <span>Bill Evans</span>
+                        <span class="compatibility-badge medium">MEDIUM</span>
+                    </div>
+                    <div class="profile-item piano-adapted" onclick="selectProfile('herbie')">
+                        <span>Herbie Hancock</span>
+                        <span class="compatibility-badge medium">MEDIUM</span>
+                    </div>
+                    <div class="profile-item piano-adapted" onclick="selectProfile('mehldau')">
+                        <span>Brad Mehldau</span>
+                        <span class="compatibility-badge medium">MEDIUM</span>
+                    </div>
+                    <div class="profile-item piano-adapted" onclick="selectProfile('ellington')">
+                        <span>Duke Ellington</span>
+                        <span class="compatibility-badge medium">MEDIUM</span>
+                    </div>
+                    <div class="profile-item piano-adapted" onclick="selectProfile('chick-corea')">
+                        <span>Chick Corea</span>
+                        <span class="compatibility-badge medium">MEDIUM</span>
+                    </div>
+                    <div class="profile-item piano-adapted" onclick="selectProfile('monk')">
+                        <span>Thelonious Monk</span>
+                        <span class="compatibility-badge medium">MEDIUM</span>
+                    </div>
+                    <div class="profile-item" onclick="selectProfile('ligeti')">
+                        <span>Ligeti</span>
+                        <span class="compatibility-badge low">LOW</span>
+                    </div>
+                    <div class="profile-item" onclick="selectProfile('stravinsky')">
+                        <span>Stravinsky</span>
+                        <span class="compatibility-badge low">LOW</span>
+                    </div>
+                    <div class="profile-item" onclick="selectProfile('shostakovich')">
+                        <span>Shostakovich</span>
+                        <span class="compatibility-badge low">LOW</span>
+                    </div>
+                    <div class="profile-item" onclick="selectProfile('steve-reich')">
+                        <span>Steve Reich</span>
+                        <span class="compatibility-badge low">LOW</span>
+                    </div>
+                    <div class="profile-item" onclick="selectProfile('john-williams')">
+                        <span>John Williams</span>
+                        <span class="compatibility-badge low">LOW</span>
+                    </div>
+                    <div class="profile-item" onclick="selectProfile('hans-zimmer')">
+                        <span>Hans Zimmer</span>
+                        <span class="compatibility-badge low">LOW</span>
+                    </div>
+                    <div class="profile-item" onclick="selectProfile('morricone')">
+                        <span>Ennio Morricone</span>
+                        <span class="compatibility-badge low">LOW</span>
+                    </div>
+                    <div class="profile-item" onclick="selectProfile('herrmann')">
+                        <span>Bernard Herrmann</span>
+                        <span class="compatibility-badge low">LOW</span>
+                    </div>
+                    <div class="profile-item" onclick="selectProfile('philip-glass')">
+                        <span>Philip Glass</span>
+                        <span class="compatibility-badge low">LOW</span>
+                    </div>
+                    <div class="profile-item" onclick="selectProfile('sakamoto')">
+                        <span>Ryuichi Sakamoto</span>
+                        <span class="compatibility-badge medium">MEDIUM</span>
+                    </div>
+                    <div class="profile-item" onclick="selectProfile('jamerson')">
+                        <span>James Jamerson</span>
+                        <span class="compatibility-badge low">LOW</span>
+                    </div>
+                    <div class="profile-item" onclick="selectProfile('kendrick')">
+                        <span>Kendrick Lamar</span>
+                        <span class="compatibility-badge low">LOW</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="category">
+                <div class="category-header" onclick="toggleCategory('techniques')">
+                    <span>▶ Guitar Techniques</span>
+                    <span class="category-count">28</span>
+                </div>
+                <div class="profile-list" id="techniques">
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('campanella')">
+                        <span>Campanella</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('tremolo')">
+                        <span>Tremolo</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('harmonics')">
+                        <span>Harmonics</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('boom-chuck')">
+                        <span>Boom-Chuck</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('travis-picking')">
+                        <span>Travis Picking</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('clawhammer')">
+                        <span>Clawhammer</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('slack-key')">
+                        <span>Slack-Key (Hawaiian)</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('fingerstyle')">
+                        <span>Open Fingerstyle</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('melody-bass')">
+                        <span>Melody-Bass Duets</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('muted-funk')">
+                        <span>Muted Sixteenth/Funk</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('ska-reggae')">
+                        <span>Ska/Reggae Chank</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('calypso')">
+                        <span>Calypso Roll</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('chicken-picking')">
+                        <span>Funk Chicken-Picking</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('afrobeat')">
+                        <span>Afrobeat Interlock</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('balkan')">
+                        <span>Balkan Odd Meters</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('north-african')">
+                        <span>North African Pentatonic</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('andean')">
+                        <span>Andean Charango</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('middle-eastern')">
+                        <span>Middle Eastern Oud</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('indian-raga')">
+                        <span>Indian Raga</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('slide')">
+                        <span>Slide/Dobro Delta Blues</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('tapping')">
+                        <span>Tapping</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('polyrhythmic')">
+                        <span>Modern Polyrhythmic</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('gospel-soul')">
+                        <span>Gospel/Soul Chording</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('jazz-chord-melody')">
+                        <span>Jazz Chord-Melody</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('fusion-hybrid')">
+                        <span>Fusion Hybrid Picking</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('la-pompe')">
+                        <span>Gypsy La Pompe</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('koupes')">
+                        <span>Greek Koupes Rhythm</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                    <div class="profile-item guitar-compatible" onclick="selectProfile('taximi')">
+                        <span>Taximi Improvisation</span>
+                        <span class="compatibility-badge high">HIGH</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="content-area">
+            <div class="profile-header">
+                <div class="profile-name" id="profileName">Select a Profile</div>
+                <div class="profile-description" id="profileDescription">
+                    Choose a profile from the sidebar to see its fretboard patterns and techniques
+                </div>
+            </div>
+            
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('scales')">Scales</button>
+                <button class="tab" onclick="switchTab('chords')">Chords</button>
+                <button class="tab" onclick="switchTab('techniques')">Techniques</button>
+                <button class="tab" onclick="switchTab('patterns')">Patterns</button>
+                <button class="tab" onclick="switchTab('tunings')">Tunings</button>
+            </div>
+            
+            <div class="fretboard-container">
+                <div class="pattern-selector">
+                    <label>Pattern:</label>
+                    <select id="patternSelect" onchange="updateFretboard()">
+                        <option value="default">Select a profile first</option>
+                    </select>
+                </div>
+                
+                <svg id="fretboard" viewBox="0 0 1000 300" preserveAspectRatio="xMidYMid meet">
+                    <!-- Fretboard will be rendered here -->
+                </svg>
+                
+                <div class="techniques-grid hidden" id="techniquesGrid">
+                    <!-- Technique cards will be rendered here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Complete profile database with all 77 profiles
+        const profiles = {
+            // Classical
+            'sor-giuliani': {
+                name: 'Sor/Giuliani',
+                category: 'Classical',
+                description: 'Classical/Arpeggios/Alberti Bass/Balance',
+                compatibility: 'high',
+                scales: ['C Major', 'A Minor', 'G Major'],
+                chords: ['Classical Voicings', 'Open Position Chords'],
+                techniques: ['Arpeggios', 'Alberti Bass', 'Rest Stroke'],
+                patterns: [
+                    { name: 'p-i-m-a Arpeggio', notes: [[0,0], [1,1], [2,0], [3,2], [4,3], [5,0]] },
+                    { name: 'Alberti Bass Pattern', notes: [[3,0], [3,2], [4,3], [3,2]] }
+                ],
+                tuning: 'Standard'
+            },
+            'tarrega-mertz': {
+                name: 'Tárrega/Mertz/Regondi',
+                category: 'Classical',
+                description: 'Romantic/Lyric/Inner Voices/Harmonics/Tremolo',
+                compatibility: 'high',
+                scales: ['E Minor', 'A Major'],
+                chords: ['Romantic Voicings'],
+                techniques: ['Tremolo', 'Harmonics', 'Inner Voices'],
+                patterns: [
+                    { name: 'Classical Tremolo', notes: [[0,12], [0,0], [1,0], [0,12]] },
+                    { name: 'Harmonic Points', notes: [[0,12], [1,12], [2,12], [3,12], [4,12], [5,12]] }
+                ],
+                tuning: 'Standard'
+            },
+            'villa-lobos': {
+                name: 'Villa-Lobos/Brouwer',
+                category: 'Classical',
+                description: 'Percussive/Modern/Extended/Spectral/Polyrhythmic',
+                compatibility: 'high',
+                scales: ['Whole Tone', 'Chromatic'],
+                chords: ['Extended Chords', 'Cluster Voicings'],
+                techniques: ['Percussive', 'Extended Techniques'],
+                patterns: [
+                    { name: 'Percussive Pattern', notes: [[5,0], [5,3], [4,2], [3,0]] },
+                    { name: 'Modern Voicing', notes: [[5,1], [4,3], [3,3], [2,2], [1,1]] }
+                ],
+                tuning: 'Standard'
+            },
+            
+            // Jazz Guitar
+            'wes-montgomery': {
+                name: 'Wes Montgomery',
+                category: 'Jazz',
+                description: 'Thumb Octaves/Chord Solos/Melodic Blues',
+                compatibility: 'high',
+                scales: ['Jazz Blues', 'Mixolydian', 'Dorian'],
+                chords: ['Rootless Voicings', 'Octave Shapes'],
+                techniques: ['Thumb Picking', 'Octaves', 'Chord-Melody'],
+                patterns: [
+                    { name: 'Octave Pattern', notes: [[5,3], [3,5], [5,5], [3,7]] },
+                    { name: 'Blues Box', notes: [[5,3], [4,3], [3,3], [2,4], [1,3], [0,3]] },
+                    { name: 'Chord-Melody', notes: [[4,5], [3,5], [2,6], [1,5]] }
+                ],
+                tuning: 'Standard'
+            },
+            'jim-hall': {
+                name: 'Jim Hall',
+                category: 'Jazz',
+                description: 'Sparse/Lyrical/Conversations',
+                compatibility: 'high',
+                scales: ['Lydian', 'Altered Scale'],
+                chords: ['Sparse Voicings', 'Quartal Harmony'],
+                techniques: ['Melodic Development', 'Space Usage'],
+                patterns: [
+                    { name: 'Lyrical Line', notes: [[2,5], [2,7], [1,5], [0,6]] },
+                    { name: 'Conversational', notes: [[3,7], [2,5], [3,7], [1,8]] }
+                ],
+                tuning: 'Standard'
+            },
+            'joe-pass': {
+                name: 'Joe Pass',
+                category: 'Jazz',
+                description: 'Chord-Melody Jazz',
+                compatibility: 'high',
+                scales: ['Bebop Scale', 'Chromatic'],
+                chords: ['Walking Bass Chords', 'Substitutions'],
+                techniques: ['Chord-Melody', 'Walking Bass'],
+                patterns: [
+                    { name: 'Walking Bass', notes: [[5,3], [5,5], [4,5], [4,7]] },
+                    { name: 'Chord Movement', notes: [[3,5], [2,4], [1,5], [3,7]] }
+                ],
+                tuning: 'Standard'
+            },
+            
+            // Alternative Tunings
+            'sonic-youth': {
+                name: 'Sonic Youth',
+                category: 'Alternative',
+                description: 'Custom Tuning/Cluster Chords/Noise',
+                compatibility: 'high',
+                scales: ['Custom Scales'],
+                chords: ['Cluster Chords', 'Dissonant Voicings'],
+                techniques: ['Prepared Guitar', 'Feedback Control'],
+                patterns: [
+                    { name: 'CGDGCD Cluster', notes: [[5,0], [4,0], [3,0], [2,3], [1,5]] },
+                    { name: 'Noise Texture', notes: [[5,2], [4,2], [3,2], [2,2], [1,2], [0,2]] }
+                ],
+                tuning: 'CGDGCD'
+            },
+            'joni-mitchell': {
+                name: 'Joni Mitchell',
+                category: 'Alternative',
+                description: 'Open/Modal, Fingerstyle',
+                compatibility: 'high',
+                scales: ['Modal Scales'],
+                chords: ['Open Tuning Chords'],
+                techniques: ['Fingerstyle', 'Capo Usage'],
+                patterns: [
+                    { name: 'Open D Pattern', notes: [[5,0], [4,0], [3,0], [2,0], [1,2]] },
+                    { name: 'Modal Movement', notes: [[3,2], [2,4], [1,2], [0,0]] }
+                ],
+                tuning: 'Open D'
+            },
+            
+            // Greek & Rebetiko
+            'rebetiko': {
+                name: 'Greek Rebetiko',
+                category: 'Greek',
+                description: 'Walking harmonic bass, koupes rhythm patterns',
+                compatibility: 'high',
+                scales: ['Byzantine', 'Hijaz', 'Minor'],
+                chords: ['Minor/Major/Diminished', 'Extended'],
+                techniques: ['Koupes Rhythm', 'Walking Bass', 'Ornamentation'],
+                patterns: [
+                    { name: 'Koupes 2/4', notes: [[5,0], [4,2], [5,0], [3,0]] },
+                    { name: 'Byzantine Scale', notes: [[5,0], [5,1], [5,4], [4,2], [3,0], [3,1]] },
+                    { name: 'Walking Bass', notes: [[5,0], [5,2], [4,0], [4,2]] },
+                    { name: '9/8 Pattern', notes: [[5,0], [4,2], [3,0], [4,2], [5,0]] }
+                ],
+                tuning: 'Standard'
+            },
+            
+            // Shoegaze
+            'mbv': {
+                name: 'My Bloody Valentine',
+                category: 'Shoegaze',
+                description: 'Wall of sound/reverb/delay/glide technique',
+                compatibility: 'high',
+                scales: ['Major', 'Minor'],
+                chords: ['Open Chords', 'Octave Voicings'],
+                techniques: ['Glide', 'Wall of Sound', 'Heavy Effects'],
+                patterns: [
+                    { name: 'Glide Pattern', notes: [[3,0], [2,0], [1,0], [0,0]] },
+                    { name: 'Wall Chord', notes: [[5,0], [4,2], [3,2], [2,2], [1,0], [0,0]] }
+                ],
+                tuning: 'Standard'
+            },
+            
+            // Techniques
+            'travis-picking': {
+                name: 'Travis Picking',
+                category: 'Technique',
+                description: 'Alternating bass with melody',
+                compatibility: 'high',
+                scales: ['Major', 'Minor'],
+                chords: ['Open Position'],
+                techniques: ['Thumb Independence', 'Alternating Bass'],
+                patterns: [
+                    { name: 'Basic Pattern', notes: [[5,0], [3,2], [4,2], [3,2]] },
+                    { name: 'Advanced', notes: [[5,0], [2,1], [4,2], [1,0], [5,0], [0,3]] }
+                ],
+                tuning: 'Standard'
+            },
+            'boom-chuck': {
+                name: 'Boom-Chuck',
+                category: 'Technique',
+                description: 'Bluegrass/country/folk rhythm',
+                compatibility: 'high',
+                scales: ['Major Pentatonic'],
+                chords: ['Cowboy Chords'],
+                techniques: ['Bass Note Alternation', 'Strumming'],
+                patterns: [
+                    { name: 'G Pattern', notes: [[5,3], [3,0], [2,0], [1,0]] },
+                    { name: 'C Pattern', notes: [[4,3], [3,2], [2,1], [1,0]] }
+                ],
+                tuning: 'Standard'
+            },
+            
+            // Piano Adapted
+            'bill-evans': {
+                name: 'Bill Evans',
+                category: 'Piano',
+                description: 'Rootless Voicings/Inner Lines',
+                compatibility: 'medium',
+                scales: ['Modal', 'Chromatic'],
+                chords: ['Rootless Voicings', 'Upper Structure'],
+                techniques: ['Voice Leading', 'Inner Motion'],
+                patterns: [
+                    { name: 'Rootless II-V', notes: [[3,3], [2,4], [1,3], [0,3]] },
+                    { name: 'Inner Voice', notes: [[2,5], [2,4], [1,5], [1,3]] }
+                ],
+                tuning: 'Standard'
+            },
+            'herbie': {
+                name: 'Herbie Hancock',
+                category: 'Piano',
+                description: 'Modal/Quartal/Fusion',
+                compatibility: 'medium',
+                scales: ['Quartal', 'Pentatonic'],
+                chords: ['Quartal Voicings', 'Modal Structures'],
+                techniques: ['Quartal Harmony', 'Modal Interchange'],
+                patterns: [
+                    { name: 'Quartal Stack', notes: [[3,5], [2,5], [1,5], [0,5]] },
+                    { name: 'Modal Pattern', notes: [[4,7], [3,7], [2,6], [1,7]] }
+                ],
+                tuning: 'Standard'
+            }
+        };
+        
+        // Add remaining profiles with basic structure
+        const additionalProfiles = {
+            // Classical
+            'julian-bream': { name: 'Julian Bream', category: 'Classical', compatibility: 'high' },
+            'bach': { name: 'Bach', category: 'Classical', compatibility: 'medium' },
+            'mozart': { name: 'Mozart', category: 'Classical', compatibility: 'low' },
+            'debussy': { name: 'Debussy/Ravel', category: 'Classical', compatibility: 'medium' },
+            'bartok': { name: 'Bartók', category: 'Classical', compatibility: 'medium' },
+            
+            // Jazz
+            'john-scofield': { name: 'John Scofield', category: 'Jazz', compatibility: 'high' },
+            'pat-metheny': { name: 'Pat Metheny', category: 'Jazz', compatibility: 'high' },
+            'larry-carlton': { name: 'Larry Carlton', category: 'Jazz', compatibility: 'high' },
+            'bill-frisell': { name: 'Bill Frisell', category: 'Jazz', compatibility: 'high' },
+            'robben-ford': { name: 'Robben Ford', category: 'Jazz', compatibility: 'high' },
+            'mary-halvorson': { name: 'Mary Halvorson', category: 'Jazz', compatibility: 'high' },
+            'django': { name: 'Django Reinhardt', category: 'Jazz', compatibility: 'high' },
+            'john-mclaughlin': { name: 'John McLaughlin', category: 'Jazz', compatibility: 'high' },
+            
+            // Rock
+            'hendrix': { name: 'Jimi Hendrix', category: 'Rock', compatibility: 'high' },
+            'satriani': { name: 'Joe Satriani', category: 'Rock', compatibility: 'high' },
+            'yes': { name: 'Yes (Prog)', category: 'Rock', compatibility: 'high' },
+            'steely-dan': { name: 'Steely Dan', category: 'Rock', compatibility: 'medium' },
+            'james-blood': { name: 'James Blood Ulmer', category: 'Rock', compatibility: 'high' },
+            
+            // Alternative
+            'bert-jansch': { name: 'Bert Jansch', category: 'Alternative', compatibility: 'high' },
+            'nick-drake': { name: 'Nick Drake', category: 'Alternative', compatibility: 'high' },
+            'paul-simon': { name: 'Paul Simon', category: 'Alternative', compatibility: 'high' },
+            'jeff-tweedy': { name: 'Jeff Tweedy', category: 'Alternative', compatibility: 'high' },
+            'dadgad': { name: 'Irish DADGAD', category: 'Alternative', compatibility: 'high' },
+            
+            // Shoegaze
+            'slowdive': { name: 'Slowdive', category: 'Shoegaze', compatibility: 'high' },
+            'ride': { name: 'Ride', category: 'Shoegaze', compatibility: 'high' },
+            'lush': { name: 'Lush', category: 'Shoegaze', compatibility: 'high' },
+            'swervedriver': { name: 'Swervedriver', category: 'Shoegaze', compatibility: 'high' },
+            'cocteau': { name: 'Cocteau Twins', category: 'Shoegaze', compatibility: 'high' },
+            'chapterhouse': { name: 'Chapterhouse', category: 'Shoegaze', compatibility: 'high' },
+            'm83': { name: 'M83', category: 'Shoegaze', compatibility: 'medium' },
+            'alcest': { name: 'Alcest', category: 'Shoegaze', compatibility: 'high' },
+            
+            // Greek
+            'tsitsanis': { name: 'Vassilis Tsitsanis', category: 'Greek', compatibility: 'high' },
+            'vamvakaris': { name: 'Markos Vamvakaris', category: 'Greek', compatibility: 'high' },
+            'chiotis': { name: 'Manolis Chiotis', category: 'Greek', compatibility: 'high' },
+            'batis': { name: 'Giorgos Batis', category: 'Greek', compatibility: 'high' },
+            'mitsakis': { name: 'Giorgos Mitsakis', category: 'Greek', compatibility: 'high' },
+            'gogos': { name: 'Dimitris Gogos', category: 'Greek', compatibility: 'high' },
+            'toundas': { name: 'Panagiotis Toundas', category: 'Greek', compatibility: 'high' },
+            'skarvelis': { name: 'Kostas Skarvelis', category: 'Greek', compatibility: 'high' },
+            'peristeris': { name: 'Spyros Peristeris', category: 'Greek', compatibility: 'high' },
+            'papaioannou': { name: 'Yiannis Papaioannou', category: 'Greek', compatibility: 'high' },
+            'bayanderas': { name: 'Bayanderas', category: 'Greek', compatibility: 'high' },
+            'perpiniadis': { name: 'Perpiniadis', category: 'Greek', compatibility: 'high' },
+            'tsaousakis': { name: 'Tsaousakis', category: 'Greek', compatibility: 'high' },
+            'ksintaris': { name: 'Giorgos Ksintaris', category: 'Greek', compatibility: 'high' },
+            
+            // Techniques
+            'campanella': { name: 'Campanella', category: 'Technique', compatibility: 'high' },
+            'tremolo': { name: 'Tremolo', category: 'Technique', compatibility: 'high' },
+            'harmonics': { name: 'Harmonics', category: 'Technique', compatibility: 'high' },
+            'clawhammer': { name: 'Clawhammer', category: 'Technique', compatibility: 'high' },
+            'slack-key': { name: 'Slack-Key (Hawaiian)', category: 'Technique', compatibility: 'high' },
+            'fingerstyle': { name: 'Open Fingerstyle', category: 'Technique', compatibility: 'high' },
+            'melody-bass': { name: 'Melody-Bass Duets', category: 'Technique', compatibility: 'high' },
+            'muted-funk': { name: 'Muted Sixteenth/Funk', category: 'Technique', compatibility: 'high' },
+            'ska-reggae': { name: 'Ska/Reggae Chank', category: 'Technique', compatibility: 'high' },
+            'calypso': { name: 'Calypso Roll', category: 'Technique', compatibility: 'high' },
+            'chicken-picking': { name: 'Funk Chicken-Picking', category: 'Technique', compatibility: 'high' },
+            'afrobeat': { name: 'Afrobeat Interlock', category: 'Technique', compatibility: 'high' },
+            'balkan': { name: 'Balkan Odd Meters', category: 'Technique', compatibility: 'high' },
+            'north-african': { name: 'North African Pentatonic', category: 'Technique', compatibility: 'high' },
+            'andean': { name: 'Andean Charango', category: 'Technique', compatibility: 'high' },
+            'middle-eastern': { name: 'Middle Eastern Oud', category: 'Technique', compatibility: 'high' },
+            'indian-raga': { name: 'Indian Raga', category: 'Technique', compatibility: 'high' },
+            'slide': { name: 'Slide/Dobro Delta Blues', category: 'Technique', compatibility: 'high' },
+            'tapping': { name: 'Tapping', category: 'Technique', compatibility: 'high' },
+            'polyrhythmic': { name: 'Modern Polyrhythmic', category: 'Technique', compatibility: 'high' },
+            'gospel-soul': { name: 'Gospel/Soul Chording', category: 'Technique', compatibility: 'high' },
+            'jazz-chord-melody': { name: 'Jazz Chord-Melody', category: 'Technique', compatibility: 'high' },
+            'fusion-hybrid': { name: 'Fusion Hybrid Picking', category: 'Technique', compatibility: 'high' },
+            'la-pompe': { name: 'Gypsy La Pompe', category: 'Technique', compatibility: 'high' },
+            'koupes': { name: 'Greek Koupes Rhythm', category: 'Technique', compatibility: 'high' },
+            'taximi': { name: 'Taximi Improvisation', category: 'Technique', compatibility: 'high' },
+            
+            // Piano
+            'mehldau': { name: 'Brad Mehldau', category: 'Piano', compatibility: 'medium' },
+            'ellington': { name: 'Duke Ellington', category: 'Piano', compatibility: 'medium' },
+            'chick-corea': { name: 'Chick Corea', category: 'Piano', compatibility: 'medium' },
+            'monk': { name: 'Thelonious Monk', category: 'Piano', compatibility: 'medium' },
+            'ligeti': { name: 'Ligeti', category: 'Piano', compatibility: 'low' },
+            'stravinsky': { name: 'Stravinsky', category: 'Piano', compatibility: 'low' },
+            'shostakovich': { name: 'Shostakovich', category: 'Piano', compatibility: 'low' },
+            'steve-reich': { name: 'Steve Reich', category: 'Piano', compatibility: 'low' },
+            'john-williams': { name: 'John Williams', category: 'Piano', compatibility: 'low' },
+            'hans-zimmer': { name: 'Hans Zimmer', category: 'Piano', compatibility: 'low' },
+            'morricone': { name: 'Ennio Morricone', category: 'Piano', compatibility: 'low' },
+            'herrmann': { name: 'Bernard Herrmann', category: 'Piano', compatibility: 'low' },
+            'philip-glass': { name: 'Philip Glass', category: 'Piano', compatibility: 'low' },
+            'sakamoto': { name: 'Ryuichi Sakamoto', category: 'Piano', compatibility: 'medium' },
+            'jamerson': { name: 'James Jamerson', category: 'Piano', compatibility: 'low' },
+            'kendrick': { name: 'Kendrick Lamar', category: 'Piano', compatibility: 'low' }
+        };
+        
+        // Merge all profiles
+        Object.assign(profiles, additionalProfiles);
+        
+        let currentProfile = null;
+        let currentTab = 'scales';
+        
+        function toggleCategory(categoryId) {
+            const list = document.getElementById(categoryId);
+            const header = list.previousElementSibling;
+            const arrow = header.querySelector('span');
+            
+            if (list.classList.contains('active')) {
+                list.classList.remove('active');
+                arrow.textContent = arrow.textContent.replace('▼', '▶');
+            } else {
+                list.classList.add('active');
+                arrow.textContent = arrow.textContent.replace('▶', '▼');
+            }
+        }
+        
+        function selectProfile(profileId) {
+            // Remove previous selection
+            document.querySelectorAll('.profile-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Add selection to clicked item
+            event.target.closest('.profile-item').classList.add('selected');
+            
+            // Load profile
+            currentProfile = profiles[profileId];
+            if (currentProfile) {
+                document.getElementById('profileName').textContent = currentProfile.name;
+                document.getElementById('profileDescription').textContent = 
+                    currentProfile.description || `${currentProfile.category} style profile`;
+                
+                updatePatternSelector();
+                updateFretboard();
+            }
+        }
+        
+        function updatePatternSelector() {
+            const select = document.getElementById('patternSelect');
+            select.innerHTML = '';
+            
+            if (currentProfile && currentProfile.patterns) {
+                currentProfile.patterns.forEach((pattern, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = pattern.name;
+                    select.appendChild(option);
+                });
+            } else {
+                const option = document.createElement('option');
+                option.value = 'default';
+                option.textContent = 'No patterns available';
+                select.appendChild(option);
+            }
+        }
+        
+        function updateFretboard() {
+            const svg = document.getElementById('fretboard');
+            svg.innerHTML = '';
+            
+            // Draw fretboard
+            drawFretboard(svg);
+            
+            // Draw notes if profile has patterns
+            if (currentProfile && currentProfile.patterns) {
+                const patternIndex = document.getElementById('patternSelect').value;
+                if (patternIndex !== 'default' && currentProfile.patterns[patternIndex]) {
+                    drawPattern(svg, currentProfile.patterns[patternIndex].notes);
+                }
+            }
+        }
+        
+        function drawFretboard(svg) {
+            const strings = 6;
+            const frets = 12;
+            const stringSpacing = 40;
+            const fretSpacing = 70;
+            const startX = 50;
+            const startY = 30;
+            
+            // Draw strings
+            for (let s = 0; s < strings; s++) {
+                const y = startY + s * stringSpacing;
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', startX);
+                line.setAttribute('y1', y);
+                line.setAttribute('x2', startX + frets * fretSpacing);
+                line.setAttribute('y2', y);
+                line.setAttribute('stroke', f === 0 ? '#000' : '#999');
+                line.setAttribute('stroke-width', f === 0 ? '4' : '2');
+                svg.appendChild(line);
+                
+                // Add fret numbers
+                if (f > 0) {
+                    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    text.setAttribute('x', x - fretSpacing/2);
+                    text.setAttribute('y', startY + strings * stringSpacing + 20);
+                    text.setAttribute('text-anchor', 'middle');
+                    text.setAttribute('fill', '#666');
+                    text.setAttribute('font-size', '12');
+                    text.textContent = f.toString();
+                    svg.appendChild(text);
+                }
+            }
+            
+            // Add position dots
+            const dotFrets = [3, 5, 7, 9, 12];
+            dotFrets.forEach(fret => {
+                if (fret <= frets) {
+                    const x = startX + (fret - 0.5) * fretSpacing;
+                    const y = startY + 2.5 * stringSpacing;
+                    
+                    if (fret === 12) {
+                        // Double dot at 12th fret
+                        [1.5, 3.5].forEach(offset => {
+                            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                            circle.setAttribute('cx', x);
+                            circle.setAttribute('cy', startY + offset * stringSpacing);
+                            circle.setAttribute('r', '6');
+                            circle.setAttribute('fill', '#ddd');
+                            svg.appendChild(circle);
+                        });
+                    } else {
+                        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                        circle.setAttribute('cx', x);
+                        circle.setAttribute('cy', y);
+                        circle.setAttribute('r', '6');
+                        circle.setAttribute('fill', '#ddd');
+                        svg.appendChild(circle);
+                    }
+                }
+            });
+        }
+        
+        function drawPattern(svg, notes) {
+            const stringSpacing = 40;
+            const fretSpacing = 70;
+            const startX = 50;
+            const startY = 30;
+            
+            notes.forEach(note => {
+                const [string, fret] = note;
+                const x = startX + (fret === 0 ? -20 : (fret - 0.5) * fretSpacing);
+                const y = startY + string * stringSpacing;
+                
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', x);
+                circle.setAttribute('cy', y);
+                circle.setAttribute('r', '15');
+                circle.setAttribute('fill', string === 5 ? '#667eea' : '#764ba2');
+                circle.setAttribute('stroke', '#fff');
+                circle.setAttribute('stroke-width', '2');
+                svg.appendChild(circle);
+                
+                // Add fret number inside circle
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', x);
+                text.setAttribute('y', y + 5);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('fill', '#fff');
+                text.setAttribute('font-size', '12');
+                text.setAttribute('font-weight', 'bold');
+                text.textContent = fret.toString();
+                svg.appendChild(text);
+            });
+        }
+        
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update content based on tab
+            if (tab === 'techniques' && currentProfile && currentProfile.techniques) {
+                showTechniques();
+            } else {
+                document.getElementById('techniquesGrid').classList.add('hidden');
+                updateFretboard();
+            }
+        }
+        
+        function showTechniques() {
+            const grid = document.getElementById('techniquesGrid');
+            grid.innerHTML = '';
+            grid.classList.remove('hidden');
+            
+            if (currentProfile && currentProfile.techniques) {
+                currentProfile.techniques.forEach(tech => {
+                    const card = document.createElement('div');
+                    card.className = 'technique-card';
+                    card.innerHTML = `
+                        <div class="technique-name">${tech}</div>
+                        <div class="technique-desc">Click to see pattern</div>
+                    `;
+                    card.onclick = () => updateFretboard();
+                    grid.appendChild(card);
+                });
+            }
+        }
+        
+        // Search functionality
+        document.getElementById('searchBox').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            
+            document.querySelectorAll('.profile-item').forEach(item => {
+                const name = item.querySelector('span').textContent.toLowerCase();
+                const category = item.closest('.profile-list').id;
+                
+                if (name.includes(searchTerm) || category.includes(searchTerm)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            
+            // Show categories with matching profiles
+            document.querySelectorAll('.profile-list').forEach(list => {
+                const hasVisible = Array.from(list.querySelectorAll('.profile-item'))
+                    .some(item => item.style.display !== 'none');
+                
+                if (searchTerm && hasVisible) {
+                    list.classList.add('active');
+                    const header = list.previousElementSibling.querySelector('span');
+                    header.textContent = header.textContent.replace('▶', '▼');
+                }
+            });
+        });
+        
+        // Initialize
+        window.onload = () => {
+            drawFretboard(document.getElementById('fretboard'));
+        };
+    </script>
+</body>
+</html> '#333');
+                line.setAttribute('stroke-width', s < 2 ? '3' : '2');
+                svg.appendChild(line);
+            }
+            
+            // Draw frets
+            for (let f = 0; f <= frets; f++) {
+                const x = startX + f * fretSpacing;
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', x);
+                line.setAttribute('y1', startY);
+                line.setAttribute('x2', x);
+                line.setAttribute('y2', startY + (strings - 1) * stringSpacing);
+                line.setAttribute('stroke',

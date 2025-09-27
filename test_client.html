@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head><title>Test</title></head>
+<body>
+<h1>BULLETPROOF Test</h1>
+<button onclick="testSave()">Test Save</button>
+<div id="result"></div>
+<script>
+async function testSave() {
+    const testData = {
+        name: 'test_profile',
+        timestamp: Date.now(),
+        notes: [60, 62, 64],
+        test: true
+    };
+    
+    try {
+        const response = await fetch('http://localhost:9999/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(testData)
+        });
+        const result = await response.json();
+        document.getElementById('result').innerHTML = 
+            result.success ? '✅ SAVED: ' + result.file : '❌ FAILED';
+    } catch (err) {
+        document.getElementById('result').innerHTML = '❌ Server not running';
+    }
+}
+
+// Auto-test after 1 second
+setTimeout(testSave, 1000);
+</script>
+<script src="complete_profiles.js"></script>
+</body>
+</html>

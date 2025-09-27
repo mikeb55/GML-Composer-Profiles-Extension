@@ -1,0 +1,17 @@
+Repos to add to the profiles
+
+GuitarSet — github.com/marl/GuitarSet
+
+GAPS (Guitar-Aligned Performance Scores) — github.com/fosfrancesco/GAPS-dataset
+
+PDMX (Public Domain MusicXML Dataset) — github.com/pnlong/PDMX
+
+ASAP (Aligned Scores and Performances) — github.com/fosfrancesco/asap-dataset
+
+Musetrainer / MusicXML library — github.com/musetrainer/library
+
+Free MIDI Chords — github.com/ldrolez/free-midi-chords
+
+JCGuidry / Classical-Music-Artist-Classification — github.com/jcguidry/classical-music-artist-classification
+
+Awesome MIDI Sources (index) — github.com/albertmeronyo/awesome-midi-sources
